@@ -1,0 +1,179 @@
+---
+title       : Hypothesis Testing & Regression
+subtitle    : 
+author      : Kris Sankaran
+job         : 
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : [mathjax]            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+---
+## Statistical Inference
+
+# Goal: Test scientific claim and quantify our uncertainty about it.
+
++ Comparing means between groups: the $t$-test.
+    - $p$-values
+    - Confidence intervals
++ Associating quantitative variables.
+    - Linear regression
+
+---
+# Comparing means
+
+- We have two samples with numerical measurements.
+- We want to see whether the mean of one is significantly larger than another.
+
+```{r comparing_means, echo = F}
+n.points <- 50
+X.true.diff <- data.frame(x = c(rnorm(n.points), rnorm(n.points, .5)), group = factor(c(rep("A", n.points), rep("B", n.points))))
+library("ggplot2")
+X.no.diff <- data.frame(x = rnorm(2 * n.points, 0, 1), group = factor(c(rep("A", n.points), rep("B", n.points))))
+```
+
+```{r}
+X.true.diff[1:3, ]
+summary(X.true.diff)
+```
+
+---
+
+Simulated data with true difference in means:
+```{r comparing_means_plot_2, echo = F, fig.align = "center"}
+ggplot(X.true.diff) + geom_boxplot(aes(x = group, y = x)) + ggtitle("True difference")
+```
+
+---
+
+Simulated data with no difference in means:
+
+```{r comparing_fake_means_2, echo = F, fig.align = "center"}
+ggplot(X.no.diff) + geom_boxplot(aes(x = group, y = x)) + ggtitle("No true difference")
+```
+
+--- 
+## $t$-test
+
+To quantitatively assess the difference in means, calculate
+$$t = \frac{\bar{X}_{A} - \bar{X}_{B}}{\sqrt{Var{X}}}.$$
+
+- $\bar{X}_{groups}$ is the mean in that group
+-  $Var{Z}$ is the sample variance, 
+a measure of the "spread" of that group.
+
+If, there is no difference between the groups, we know the 
+distribution of $t$, as long as a few extra assumptions hold, 
+- The variances between the two groups are similar.
+- Different samples are independent of each other.
+- Data are close to normal (bell-shaped).
+
+---
+## Application to previous data
+
+```{r t_testing}
+# True difference
+t.test(x ~ group, data = X.true.diff)
+```
+
+---
+
+```{r t_testing_fake}
+# No true difference
+t.test(x ~ group, data = X.no.diff)
+```
+
+--- 
+## Interpretation
+
++ $p$-value: The probability of a false positive.
++ Confidence interval: If we repeat the experiment, this interval 
+  will contain the true difference in means with 95% probability.
+
+--- 
+
+# Real world example
+
+Data from the [EMI music hackathon](https://www.kaggle.com/c/MusicHackathon).
+
+```{r music_test, echo = F, warning = F, fig.align = "center"}
+users <- read.csv("users.csv", row.names = 1)
+users.impt <- subset(users, music %in% c("very.impt", "no.longer.impt"))
+ggplot(users.impt) + geom_boxplot(aes(x = music, y = age)) + ggtitle("Music importance vs. Age")
+```
+
+---
+
+```{r music_test_output}
+t.test(age ~ music, data = users.impt)
+```
+
+---
+
+## Linear Regression
+
+- What is the formula for the linear relationship
+between variables? (red is truth, blue is estimate)
+
+```{r lm-example, echo = F, fig.align = "center"}
+x <- rnorm(n.points)
+XY <- data.frame(x = x, y = 1.3 * x + .8 + rnorm(n.points, 0, 2))
+XY.model <- lm(y ~ x, data = XY)
+ggplot(XY) + geom_point(aes(x = x, y = y)) + 
+   geom_abline(aes(slope = 1.3, intercept = .8), col = "red") + 
+   geom_abline(intercept = coefficients(XY.model)[1], slope = coefficients(XY.model)[2], col = "blue")
+```
+
+---
+
+## Application to previous data
+
+- The interpretation of $p$-values and confidence intervals remains the same.
+- We also have estimates of the slope and intercept for the above line.
+
+```{r}
+XY.model <- lm(y ~ x, data = XY)
+summary(XY.model)
+
+```
+
+---
+```{r} 
+confint(XY.model)
+```
+
+---
+
+## Real world application
+Users answered, on a scale of 0 to 100,
+whether "I like to be at the cutting edge of 
+new music" and "I like to know about music before
+other people" (they also asked other questions).
+```{r echo = F, warning = F, fig.align = "center"}
+questions.model <- lm(Q18 ~ Q19, data  = users)
+ggplot(users, aes(x = Q18, y = Q19)) +
+    geom_point(alpha = 0.2) + 
+    geom_abline(intercept = coefficients(questions.model)[1],
+    		slope = coefficients(questions.model)[2], col = "red")
+```
+
+--- 
+
+```{r questions, warning = F}
+summary(lm(Q19 ~ Q18, data  = users))
+```
+
+---
+
+The estimated regression line seems reasonable, but the $p$-values
+should not be trusted, because the independence and linearity assumptions
+seem violated. In this case, the regression model is useful for prediction, 
+but not for testing.
+
+Next steps, for those interested...
+
+- Testing in categorical data (the $\chi^{2}$-test)
+- Model assessment and diagnostics
+- Confounding, and how to deal with it
+- Doing inference when linear models fail: using the "bootstrap"
+

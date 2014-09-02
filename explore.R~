@@ -1,0 +1,51 @@
+users <- read.csv("users_edit.csv", sep = "\t")
+
+head(users)
+
+users$listen.hours <- pmax(users$listen.hours + rnorm(nrow(users), 0, .5), 0)
+
+dim(words)
+dim(train)
+
+words <- read.csv("words.csv")
+words <- words[, c("Artist", "User", "LIKE_ARTIST", "Beautiful", "Fun", "Cool", "Thoughtful", "Current")]
+words$Artist <- as.factor(words$Artist)
+words$User <- as.factor(words$User)
+train <- read.csv("train.csv")
+head(users)
+head(words)
+
+library("ggplot2")
+
+ggplot(users) +
+    geom_boxplot(aes(x = music, y = age))
+
+ggplot(users) +
+    geom_violin(aes(x = music, y = listen.hours))
+
+ggplot(users) +
+    geom_histogram(aes(x = sqrt(listen.hours)),
+                   binwidth = 0.1)
+
+library("plyr")
+library("reshape2")
+m.words <- melt(words, id.vars = c("Artist", "LIKE_ARTIST", "User"))
+mean.words <- ddply(m.words, .(Artist, variable), summarise,
+                    mean = mean(value, na.rm = T))
+
+mean.words$Artist <- as.factor(mean.words$Artist)
+ggplot(mean.words) +
+    geom_point(aes(x = Artist, y = mean, col = variable))
+
+# Combining data sets
+colnames(users)[1] <- "User"
+head(words)
+music <- merge(words, users, by = "User")
+
+head(music)
+plot(log(1 + users$Q10), log(1 + users$Q8))
+model.test <- lm(log(1 + Q8) ~ log(1 + Q10), data = users)
+abline(model.test, col = "red")
+summary(model.test)
+
+pairs(
