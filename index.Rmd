@@ -3,15 +3,21 @@ title       : Hypothesis Testing & Regression
 subtitle    : 
 author      : Kris Sankaran
 job         : 
-framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+framework: revealjs
+revealjs: {theme: solarized}
 highlighter : highlight.js  # {highlight.js, prettify, highlight}
 hitheme     : tomorrow      # 
 widgets     : [mathjax]            # {mathjax, quiz, bootstrap}
 mode        : selfcontained # {standalone, draft}
 ---
-## Statistical Inference
 
-# Goal: Test scientific claim and quantify our uncertainty about it.
+## Introduction to Hypothesis Testing and Linear Regression
+
+---
+
+# Statistical Inference
+
+*Goal*: Test scientific claims and quantify our uncertainty about it.
 
 + Comparing means between groups: the $t$-test.
     - $p$-values
@@ -22,10 +28,13 @@ mode        : selfcontained # {standalone, draft}
 All the code for this presentation is available [here](https://github.com/krisrs1128/intro-to-testing)
 
 ---
-# Comparing means
+Comparing means
+-
 
-- We have two samples with numerical measurements.
-- We want to see whether the mean of one is significantly larger than another.
+- Is the mean of one sample significantly larger than another?
+- Apply the hypothesis testing framework.
+   + Initially assume there is no difference in means (*Null* hypothesis).
+   + Require proof that the difference is nonzero (*Alternative* hypothesis).
 
 ```{r comparing_means, echo = F}
 n.points <- 50
@@ -35,8 +44,8 @@ X.no.diff <- data.frame(x = rnorm(2 * n.points, 0, 1), group = factor(c(rep("A",
 ```
 
 ```{r}
-X.true.diff[1:3, ]
-summary(X.true.diff)
+head(X.true.diff)
+
 ```
 
 ---
@@ -58,17 +67,27 @@ ggplot(X.no.diff) + geom_boxplot(aes(x = group, y = x)) + ggtitle("No true diffe
 ## $t$-test
 
 To quantitatively assess the difference in means, calculate
-$$t = \frac{\bar{X}_{A} - \bar{X}_{B}}{\sqrt{Var{X}}}.$$
+$$t = \frac{\sqrt{n}\left(\bar{X}_{A} - \bar{X}_{B}\right)}{\sqrt{\widehat{Var{X}}}}.$$
 
+- $n$ is the total number of data points.
 - $\bar{X}_{groups}$ is the mean in that group
--  $Var{Z}$ is the sample variance, 
-a measure of the "spread" of that group.
+-  $\widehat{Var{X}}$ is the sample variance, a measure of the "spread" of that group.
 
-If, there is no difference between the groups, we know the 
+---
+
+If there is no difference between the groups, we know the 
 distribution of $t$, as long as a few extra assumptions hold, 
 - The variances between the two groups are similar.
 - Different samples are independent of each other.
-- Data are close to normal (bell-shaped).
+- Either data are close to normal (bell-shaped), or there are many (> 30, say) samples.
+
+```{r t-dist, fig.height = 5, echo = F}
+x.axis <- seq(-4, 4, length.out = 1000)
+qplot(x.axis, dt(x.axis, df = 2 * n.points), geom = "line") + 
+ggtitle("t-statistic frequency curve, when no difference") +
+scale_x_continuous("t") + 
+scale_y_continuous("probability")
+```
 
 ---
 ## Application to previous data
@@ -88,13 +107,29 @@ t.test(x ~ group, data = X.no.diff)
 --- 
 ## Interpretation
 
-+ $p$-value: The probability of a false positive.
-+ Confidence interval: If we repeat the experiment, this interval 
++ $p$-value: The probability of a false positive (area under the frequency curve that is more extreme than the observed statistic).
++ Confidence interval: If we repeat the experiment, this (random) interval 
   will contain the true difference in means with 95% probability.
++ Both of these quantities are more informative than simply reporting whether we accept or reject the null hypothesis.
 
 --- 
 
-# Real world example
+Visualizing observed $t$-statistics:
+
+```{r t_with_cutoffs, echo = F}
+qplot(x.axis, dt(x.axis, df = 2 * n.points), geom = "line") + 
+ggtitle("t-statistic frequency curve, when no difference") +
+scale_x_continuous("t") + 
+scale_y_continuous("probability") + 
+geom_vline(x = t.test(x ~ group, data = X.no.diff)$statistic, col = "steelblue") + 
+geom_vline(x = t.test(x ~ group, data = X.true.diff)$statistic, col = "orange")
+```
+
+---
+
+
+Real world example
+-
 
 Data from the [EMI music hackathon](https://www.kaggle.com/c/MusicHackathon).
 
@@ -112,18 +147,20 @@ t.test(age ~ music, data = users.impt)
 
 ---
 
-## Linear Regression
+Linear Regression
+-
 
-- What is the formula for the linear relationship
-between variables? (red is truth, blue is estimate)
+- Can we estimate the relationship between variables? (red is truth, blue is an estimate)
+- Can we quantify our uncertainty about the estimate, 
+  when we don't actually know the truth?
 
-```{r lm-example, echo = F, fig.align = "center"}
-x <- rnorm(n.points)
-XY <- data.frame(x = x, y = 1.3 * x + .8 + rnorm(n.points, 0, 2))
+```{r lm-example, echo = F, fig.align = "center", fig.height = 5}
+x <- rnorm(2 * n.points)
+XY <- data.frame(x = x, y = 1.3 * x + .8 + rnorm(2 * n.points, 0, 2))
 XY.model <- lm(y ~ x, data = XY)
 ggplot(XY) + geom_point(aes(x = x, y = y)) + 
-   geom_abline(aes(slope = 1.3, intercept = .8), col = "red") + 
-   geom_abline(intercept = coefficients(XY.model)[1], slope = coefficients(XY.model)[2], col = "blue")
+   geom_abline(aes(slope = 1.3, intercept = .8), col = "steelblue", size = 2) + 
+   geom_abline(intercept = coefficients(XY.model)[1], slope = coefficients(XY.model)[2], col = "orange", size = 2)
 ```
 
 ---
@@ -146,7 +183,9 @@ confint(XY.model)
 
 ---
 
-## Real world application
+Real world application
+-
+
 Users answered, on a scale of 0 to 100,
 whether "I like to be at the cutting edge of 
 new music" and "I like to know about music before
@@ -156,7 +195,8 @@ questions.model <- lm(Q18 ~ Q19, data  = users)
 ggplot(users, aes(x = Q18, y = Q19)) +
     geom_point(alpha = 0.2) + 
     geom_abline(intercept = coefficients(questions.model)[1],
-    		slope = coefficients(questions.model)[2], col = "red")
+    		slope = coefficients(questions.model)[2], col = "steelblue", 
+		size = 2)
 ```
 
 --- 
@@ -168,14 +208,17 @@ summary(lm(Q19 ~ Q18, data  = users))
 ---
 
 The estimated regression line seems reasonable, but the $p$-values
-should not be trusted, because the independence and linearity assumptions
+should not be trusted, because the *independence* and *linearity* assumptions
 seem violated. In this case, the regression model is useful for prediction, 
 but not for testing.
 
-Next steps, for those interested...
+---
 
+Here are some other useful statistical ideas
+
+- Testing difference in proportions
 - Testing in categorical data (the $\chi^{2}$-test)
 - Model assessment and diagnostics
+- Transforming features for regression
 - Confounding, and how to deal with it
 - Doing inference when linear models fail: using the "bootstrap"
-

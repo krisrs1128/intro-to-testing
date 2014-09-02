@@ -3,15 +3,21 @@ title       : Hypothesis Testing & Regression
 subtitle    : 
 author      : Kris Sankaran
 job         : 
-framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+framework: revealjs
+revealjs: {theme: solarized}
 highlighter : highlight.js  # {highlight.js, prettify, highlight}
 hitheme     : tomorrow      # 
 widgets     : [mathjax]            # {mathjax, quiz, bootstrap}
 mode        : selfcontained # {standalone, draft}
 ---
-## Statistical Inference
 
-# Goal: Test scientific claim and quantify our uncertainty about it.
+## Introduction to Hypothesis Testing and Linear Regression
+
+---
+
+# Statistical Inference
+
+*Goal*: Test scientific claims and quantify our uncertainty about it.
 
 + Comparing means between groups: the $t$-test.
     - $p$-values
@@ -22,37 +28,29 @@ mode        : selfcontained # {standalone, draft}
 All the code for this presentation is available [here](https://github.com/krisrs1128/intro-to-testing)
 
 ---
-# Comparing means
+Comparing means
+-
 
-- We have two samples with numerical measurements.
-- We want to see whether the mean of one is significantly larger than another.
+- Is the mean of one sample significantly larger than another?
+- Apply the hypothesis testing framework.
+   + Initially assume there is no difference in means (*Null* hypothesis).
+   + Require proof that the difference is nonzero (*Alternative* hypothesis).
 
 
 
 
 ```r
-X.true.diff[1:3, ]
+head(X.true.diff)
 ```
 
 ```
 ##         x group
-## 1  0.9232     A
-## 2 -0.7360     A
-## 3  0.8210     A
-```
-
-```r
-summary(X.true.diff)
-```
-
-```
-##        x          group 
-##  Min.   :-2.484   A:50  
-##  1st Qu.:-0.401   B:50  
-##  Median : 0.163         
-##  Mean   : 0.215         
-##  3rd Qu.: 0.801         
-##  Max.   : 3.007
+## 1 -0.6339     A
+## 2  2.5168     A
+## 3 -0.7180     A
+## 4 -0.7308     A
+## 5  1.0263     A
+## 6  0.2749     A
 ```
 
 ---
@@ -70,17 +68,21 @@ Simulated data with no difference in means:
 ## $t$-test
 
 To quantitatively assess the difference in means, calculate
-$$t = \frac{\bar{X}_{A} - \bar{X}_{B}}{\sqrt{Var{X}}}.$$
+$$t = \frac{\sqrt{n}\left(\bar{X}_{A} - \bar{X}_{B}\right)}{\sqrt{\widehat{Var{X}}}}.$$
 
+- $n$ is the total number of data points.
 - $\bar{X}_{groups}$ is the mean in that group
--  $Var{Z}$ is the sample variance, 
-a measure of the "spread" of that group.
+-  $\widehat{Var{X}}$ is the sample variance, a measure of the "spread" of that group.
 
-If, there is no difference between the groups, we know the 
+---
+
+If there is no difference between the groups, we know the 
 distribution of $t$, as long as a few extra assumptions hold, 
 - The variances between the two groups are similar.
 - Different samples are independent of each other.
-- Data are close to normal (bell-shaped).
+- Either data are close to normal (bell-shaped), or there are many (> 30, say) samples.
+
+![plot of chunk t-dist](assets/fig/t-dist.png) 
 
 ---
 ## Application to previous data
@@ -96,13 +98,13 @@ t.test(x ~ group, data = X.true.diff)
 ## 	Welch Two Sample t-test
 ## 
 ## data:  x by group
-## t = -2.627, df = 97.87, p-value = 0.01001
+## t = -2.647, df = 98, p-value = 0.009463
 ## alternative hypothesis: true difference in means is not equal to 0
 ## 95 percent confidence interval:
-##  -0.8545 -0.1190
+##  -0.9397 -0.1344
 ## sample estimates:
 ## mean in group A mean in group B 
-##        -0.02875         0.45801
+##         -0.1219          0.4152
 ```
 
 ---
@@ -118,25 +120,34 @@ t.test(x ~ group, data = X.no.diff)
 ## 	Welch Two Sample t-test
 ## 
 ## data:  x by group
-## t = 1.06, df = 96.88, p-value = 0.2919
+## t = -0.0945, df = 97.76, p-value = 0.9249
 ## alternative hypothesis: true difference in means is not equal to 0
 ## 95 percent confidence interval:
-##  -0.1809  0.5954
+##  -0.4009  0.3645
 ## sample estimates:
 ## mean in group A mean in group B 
-##         0.04047        -0.16678
+##         0.02698         0.04520
 ```
 
 --- 
 ## Interpretation
 
-+ $p$-value: The probability of a false positive.
-+ Confidence interval: If we repeat the experiment, this interval 
++ $p$-value: The probability of a false positive (area under the frequency curve that is more extreme than the observed statistic).
++ Confidence interval: If we repeat the experiment, this (random) interval 
   will contain the true difference in means with 95% probability.
++ Both of these quantities are more informative than simply reporting whether we accept or reject the null hypothesis.
 
 --- 
 
-# Real world example
+Visualizing observed $t$-statistics:
+
+![plot of chunk t_with_cutoffs](assets/fig/t_with_cutoffs.png) 
+
+---
+
+
+Real world example
+-
 
 Data from the [EMI music hackathon](https://www.kaggle.com/c/MusicHackathon).
 
@@ -165,10 +176,12 @@ t.test(age ~ music, data = users.impt)
 
 ---
 
-## Linear Regression
+Linear Regression
+-
 
-- What is the formula for the linear relationship
-between variables? (red is truth, blue is estimate)
+- Can we estimate the relationship between variables? (red is truth, blue is an estimate)
+- Can we quantify our uncertainty about the estimate, 
+  when we don't actually know the truth?
 
 <img src="assets/fig/lm-example.png" title="plot of chunk lm-example" alt="plot of chunk lm-example" style="display: block; margin: auto;" />
 
@@ -192,18 +205,18 @@ summary(XY.model)
 ## 
 ## Residuals:
 ##    Min     1Q Median     3Q    Max 
-##  -5.61  -1.18   0.21   1.18   4.56 
+## -5.310 -1.128  0.051  1.601  3.154 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)    1.108      0.306    3.63  0.00069 ***
-## x              1.035      0.341    3.04  0.00383 ** 
+## (Intercept)    0.649      0.181    3.59  0.00052 ***
+## x              1.461      0.169    8.67  9.4e-14 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 2.15 on 48 degrees of freedom
-## Multiple R-squared:  0.161,	Adjusted R-squared:  0.144 
-## F-statistic: 9.24 on 1 and 48 DF,  p-value: 0.00383
+## Residual standard error: 1.81 on 98 degrees of freedom
+## Multiple R-squared:  0.434,	Adjusted R-squared:  0.428 
+## F-statistic: 75.1 on 1 and 98 DF,  p-value: 9.45e-14
 ```
 
 ---
@@ -213,14 +226,16 @@ confint(XY.model)
 ```
 
 ```
-##              2.5 % 97.5 %
-## (Intercept) 0.4937  1.722
-## x           0.3504  1.720
+##             2.5 % 97.5 %
+## (Intercept) 0.290  1.007
+## x           1.126  1.796
 ```
 
 ---
 
-## Real world application
+Real world application
+-
+
 Users answered, on a scale of 0 to 100,
 whether "I like to be at the cutting edge of 
 new music" and "I like to know about music before
@@ -259,14 +274,17 @@ summary(lm(Q19 ~ Q18, data  = users))
 ---
 
 The estimated regression line seems reasonable, but the $p$-values
-should not be trusted, because the independence and linearity assumptions
+should not be trusted, because the *independence* and *linearity* assumptions
 seem violated. In this case, the regression model is useful for prediction, 
 but not for testing.
 
-Next steps, for those interested...
+---
 
+Here are some other useful statistical ideas
+
+- Testing difference in proportions
 - Testing in categorical data (the $\chi^{2}$-test)
 - Model assessment and diagnostics
+- Transforming features for regression
 - Confounding, and how to deal with it
 - Doing inference when linear models fail: using the "bootstrap"
-
