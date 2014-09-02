@@ -19,6 +19,8 @@ mode        : selfcontained # {standalone, draft}
 + Associating quantitative variables.
     - Linear regression
 
+note: All the code for this presentation is available [here](https://github.com/krisrs1128/intro-to-testing)
+
 ---
 # Comparing means
 
